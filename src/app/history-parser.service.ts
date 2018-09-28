@@ -46,10 +46,10 @@ export class HistoryParserService {
   }
 
   private isTester(doc: Document): boolean {
-    const nodes: Array<SelectedValue> = xpath.select('(//table)[2]/tr[count(td) = 10]', doc);
+    const nodes: Array<SelectedValue> = xpath.select('(//table)[2]/tr[count(td) = 10 or count(td) = 9]', doc);
     if (nodes && nodes.length > 1) {
       const node: Node = <Node>nodes[ 1 ];
-      return node.childNodes.length === 10;
+      return node.childNodes.length === 10 || node.childNodes.length === 9;
     }
     return false;
   }

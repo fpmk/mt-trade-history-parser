@@ -4,12 +4,7 @@ import { SelectedValue } from 'xpath';
 
 export class DetailedStatementParser {
 
-  private readonly mtid: number;
-  private readonly login: number;
-
   constructor(private readonly mtid: number, private readonly login: number) {
-    this.mtid = mtid;
-    this.login = login;
   }
 
   public parse(doc: Document): DetailedStatement {
@@ -21,7 +16,7 @@ export class DetailedStatementParser {
     let positions: Position[] = [];
     let deals: Deal[] = [];
     balanceNodes.forEach((node: Element) => {
-      const child: Element = <Element>node.childNodes;
+      const child: NodeListOf<Element> = <NodeListOf<Element>>node.childNodes;
       const deal = new Deal();
       deal.mtid = this.mtid;
       deal.pos_id = 0;
@@ -49,7 +44,7 @@ export class DetailedStatementParser {
     nodes
       .filter((node: Element) => node.childNodes.length === 14)
       .forEach((node: Element) => {
-        const child: Element = <Element>node.childNodes;
+        const child: NodeListOf<Element> = <NodeListOf<Element>>node.childNodes;
         const pos = this.createStatementPos(child);
         positions.push(pos);
         deals.push(this.createStatementDeal(pos, child));
@@ -77,7 +72,7 @@ export class DetailedStatementParser {
     return new DetailedStatement(positions, deals);
   }
 
-  private createStatementPos(child: Element): Position {
+  private createStatementPos(child: NodeListOf<Element>): Position {
     const pos = new Position();
     pos.mtid = this.mtid;
     pos.pos_id = +child[ 0 ].textContent;
@@ -102,7 +97,7 @@ export class DetailedStatementParser {
     return pos;
   }
 
-  private createStatementDeal(pos, child: Element) {
+  private createStatementDeal(pos, child: NodeListOf<Element>) {
     const deal = new Deal();
     deal.mtid = this.mtid;
     deal.pos_id = pos.pos_id;
@@ -116,6 +111,7 @@ export class DetailedStatementParser {
     deal.lot = pos.lot_total;
     // deal.time = 0
     // deal.price = 0;
+    // noinspection TypeScriptUnresolvedFunction
     deal.comment = child[ 0 ].getAttribute('title');
     // deal.swap = 0;
     // deal.commission = 0;

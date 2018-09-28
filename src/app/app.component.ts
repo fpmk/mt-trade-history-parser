@@ -18,7 +18,7 @@ export class AppComponent {
     const fileReader = new FileReader();
     fileReader.onload = (ev) => {
       // console.log(fileReader.result);
-      console.log(this.parser.parseTradeHistory(fileReader.result + ''));
+      console.log(this.parser.parseTradeHistory(fileReader.result + '', 0, 0));
     };
     fileReader.readAsText(this.file);
   }

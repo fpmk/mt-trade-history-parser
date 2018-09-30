@@ -15,7 +15,13 @@ export class StrategyTesterParser {
     const positions: Position[] = [];
     let deals: Deal[] = [];
     let profit = 0;
-    deals.push(this.createFirstBalanceDeal(nodes));
+    const symbolNode: Array<SelectedValue> = xpath.select('(//table)[1]/tr[1]/td[2]', doc);
+    const symbol = <Element>symbolNode[0];
+    let smb = symbol.textContent.substr(0, symbol.textContent.indexOf(' '));
+    let firstBalanceDeal = this.createFirstBalanceDeal(nodes, smb);
+    deals.push(firstBalanceDeal);
+    let firstDeal = false;
+    let firstBalance = 0;
     nodes
       .forEach((node: Element) => {
         const child: NodeListOf<Element> = <NodeListOf<Element>>node.childNodes;
@@ -30,7 +36,7 @@ export class StrategyTesterParser {
         pos.pos_id = order;
         pos.pos_cur = pos.pos_id;
         pos.login = this.login;
-        pos.symbol = child[ 4 ].textContent; // todo
+        pos.symbol = smb;
         pos.action = type === 'buy' ? 0 : 1;
         pos.lot_total = +child[ 4 ].textContent;
         pos.vol_total = pos.lot_total * 100;
@@ -41,6 +47,13 @@ export class StrategyTesterParser {
           pos.price_open = +(child[ 5 ].textContent.replace(/ /g, ''));
         }
         if (type === 'close') {
+          pos.profit = +(child[ 8 ].textContent.replace(/ /g, ''));
+          if (!firstDeal) {
+            firstDeal = true;
+            firstBalanceDeal.balance = +(child[ 9 ].textContent.replace(/ /g, '')) - pos.profit;
+            firstBalanceDeal.profit = firstBalanceDeal.balance;
+            firstBalanceDeal.equity = firstBalanceDeal.balance;
+          }
           const price = +(child[ 5 ].textContent.replace(/ /g, ''));
           pos.digits = this.calcDigits(price + '');
           pos.time_update = new Date(child[ 1 ].textContent).getTime();
@@ -49,7 +62,6 @@ export class StrategyTesterParser {
           pos.price_current = price;
           pos.sl = +(child[ 6 ].textContent.replace(/ /g, ''));
           pos.tp = +(child[ 7 ].textContent.replace(/ /g, ''));
-          pos.profit = +(child[ 8 ].textContent.replace(/ /g, ''));
           deals.push(this.createOpenDeal(pos));
           let closeDeal = this.createCloseDeal(pos);
           profit += closeDeal.profit;
@@ -75,7 +87,7 @@ export class StrategyTesterParser {
     return price.length - price.lastIndexOf('.');
   }
 
-  private createFirstBalanceDeal(nodes: Array<SelectedValue>): Deal {
+  private createFirstBalanceDeal(nodes: Array<SelectedValue>, smb: string): Deal {
     const el: Element = <Element>nodes[ 0 ];
     const child: NodeListOf<Element> = <NodeListOf<Element>>el.childNodes;
     const deal = new Deal();
@@ -83,7 +95,7 @@ export class StrategyTesterParser {
     deal.pos_id = 0;
     deal.ticket = 1;
     deal.login = this.login;
-    deal.symbol = null;
+    deal.symbol = smb;
     deal.action = 2;
     deal.entry = 0;
     deal.digits = 0;
@@ -94,11 +106,11 @@ export class StrategyTesterParser {
     deal.comment = 'Deposit';
     deal.swap = 0;
     deal.commission = 0;
-    deal.profit = 10000;
+    deal.profit = 0;
     deal.price_pos = 0;
     deal.time_pos = 0;
-    deal.balance = 10000;
-    deal.equity = 10000;
+    deal.balance = 0;
+    deal.equity = 0;
     return deal;
   }
 
@@ -124,9 +136,6 @@ export class StrategyTesterParser {
     deal.time_pos = 0;
     deal.balance = 0;
     deal.equity = 0;
-    if (deal.time === 0 || !deal.time) {
-      console.log(deal);
-    }
     return deal;
   }
 
@@ -152,10 +161,6 @@ export class StrategyTesterParser {
     deal.time_pos = pos.time_create;
     deal.balance = 0;
     deal.equity = 0;
-    console.log('profit:', deal.profit);
-    if (deal.time === 0 || !deal.time) {
-      console.log(deal);
-    }
     return deal;
   }
 

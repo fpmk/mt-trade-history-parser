@@ -1,6 +1,7 @@
 import { Deal, DetailedStatement, Position } from '../common.class';
 import * as xpath from 'xpath';
 import { SelectedValue } from 'xpath';
+import { fieldSorter } from './utils';
 
 export class DetailedStatementParser {
 
@@ -47,17 +48,9 @@ export class DetailedStatementParser {
         const child: NodeListOf<Element> = <NodeListOf<Element>>node.childNodes;
         const pos = this.createStatementPos(child);
         positions.push(pos);
-        deals.push(this.createStatementDeal(pos, child));
+        deals.push(this.createOpenDeal(pos, child));
+        deals.push(this.createCloseDeal(pos, child));
       });
-    const fieldSorter = (fields) => (a, b) => fields.map(o => {
-      let dir = 1;
-      if (o[ 0 ] === '-') {
-        dir = -1;
-        o = o.substring(1);
-      }
-      return a[ o ] > b[ o ] ? dir : a[ o ] < b[ o ] ? -(dir) : 0;
-    }).reduce((p, n) => p ? p : n, 0);
-
     positions = positions.sort(fieldSorter([ 'time_create', 'pos_id' ]));
 
     deals = deals.sort(fieldSorter([ 'time' ]));
@@ -67,8 +60,8 @@ export class DetailedStatementParser {
       deal.equity = deal.balance;
       balance = deal.balance;
     });
-    deals.push(this.createLastStatementDeal(deals, balance));
-    console.log(positions, 'time:', (new Date().getTime() - start) / 1000);
+    deals.push(this.createLastDeal(deals, balance));
+    console.log('time:', (new Date().getTime() - start) / 1000, 'closed balance:', balance);
     return new DetailedStatement(positions, deals);
   }
 
@@ -97,33 +90,59 @@ export class DetailedStatementParser {
     return pos;
   }
 
-  private createStatementDeal(pos, child: NodeListOf<Element>) {
+  private createOpenDeal(pos, child: NodeListOf<Element>) {
     const deal = new Deal();
     deal.mtid = this.mtid;
     deal.pos_id = pos.pos_id;
-    // deal.ticket = 0;
+    deal.ticket = pos.pos_id;
     deal.login = this.login;
     deal.symbol = pos.symbol;
-    // deal.action = 0;
-    // deal.entry = 0;
+    deal.action = 1;
+    deal.entry = 0;
     deal.digits = pos.digits;
     deal.volume = pos.vol_total;
     deal.lot = pos.lot_total;
-    // deal.time = 0
-    // deal.price = 0;
+    deal.time = pos.time_create;
+    deal.price = pos.price_open;
     // noinspection TypeScriptUnresolvedFunction
     deal.comment = child[ 0 ].getAttribute('title');
-    // deal.swap = 0;
-    // deal.commission = 0;
-    // deal.profit = 0;
-    deal.price_pos = pos.price_current;
-    deal.time_pos = pos.time_create;
-    // deal.balance = 0;
-    // deal.equity = 0;
+    deal.swap = 0;
+    deal.commission = 0;
+    deal.profit = 0;
+    deal.price_pos = 0;
+    deal.time_pos = 0;
+    deal.balance = 0;
+    deal.equity = 0;
     return deal;
   }
 
-  private createLastStatementDeal(deals: Deal[], balance: number): Deal {
+  private createCloseDeal(pos, child: NodeListOf<Element>) {
+    const deal = new Deal();
+    deal.mtid = this.mtid;
+    deal.pos_id = pos.pos_id;
+    deal.ticket = pos.pos_id;
+    deal.login = this.login;
+    deal.symbol = pos.symbol;
+    deal.action = 0;
+    deal.entry = 1;
+    deal.digits = pos.digits;
+    deal.volume = pos.vol_total;
+    deal.lot = pos.lot_total;
+    deal.time = pos.time_close;
+    deal.price = pos.price_current;
+    // noinspection TypeScriptUnresolvedFunction
+    deal.comment = child[ 0 ].getAttribute('title');
+    deal.swap = pos.swap;
+    deal.commission = pos.commission;
+    deal.profit = pos.profit;
+    deal.price_pos = pos.price_current;
+    deal.time_pos = pos.time_create;
+    deal.balance = 0;
+    deal.equity = 0;
+    return deal;
+  }
+
+  private createLastDeal(deals: Deal[], balance: number): Deal {
     const lastDealFromArray = deals[ deals.length - 1 ];
     const lastDeal = new Deal();
     lastDeal.mtid = this.mtid;

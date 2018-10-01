@@ -57,6 +57,7 @@ export class DetailedStatementParser {
     let balance = 0;
     deals.forEach((deal: Deal) => {
       deal.balance = balance + deal.profit + deal.commission + deal.swap;
+      deal.balance = +deal.balance.toFixed(2);
       deal.equity = deal.balance;
       balance = deal.balance;
     });

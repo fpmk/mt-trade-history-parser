@@ -17,11 +17,10 @@ export class StrategyTesterParser {
     let profit = 0;
     const symbolNode: Array<SelectedValue> = xpath.select('(//table)[1]/tr[1]/td[2]', doc);
     const symbol = <Element>symbolNode[0];
-    let smb = symbol.textContent.substr(0, symbol.textContent.indexOf(' '));
-    let firstBalanceDeal = this.createFirstBalanceDeal(nodes, smb);
+    const smb = symbol.textContent.substr(0, symbol.textContent.indexOf(' '));
+    const firstBalanceDeal = this.createFirstBalanceDeal(nodes, smb);
     deals.push(firstBalanceDeal);
     let firstDeal = false;
-    let firstBalance = 0;
     nodes
       .forEach((node: Element) => {
         const child: NodeListOf<Element> = <NodeListOf<Element>>node.childNodes;
@@ -46,11 +45,12 @@ export class StrategyTesterParser {
           pos.time_create = new Date(child[ 1 ].textContent).getTime();
           pos.price_open = +(child[ 5 ].textContent.replace(/ /g, ''));
         }
-        if (type === 'close') {
+        if (type === 'close' || type === 't/p' || type === 's/l') {
           pos.profit = +(child[ 8 ].textContent.replace(/ /g, ''));
           if (!firstDeal) {
             firstDeal = true;
             firstBalanceDeal.balance = +(child[ 9 ].textContent.replace(/ /g, '')) - pos.profit;
+            firstBalanceDeal.balance = +firstBalanceDeal.balance.toFixed(2);
             firstBalanceDeal.profit = firstBalanceDeal.balance;
             firstBalanceDeal.equity = firstBalanceDeal.balance;
           }
@@ -63,7 +63,7 @@ export class StrategyTesterParser {
           pos.sl = +(child[ 6 ].textContent.replace(/ /g, ''));
           pos.tp = +(child[ 7 ].textContent.replace(/ /g, ''));
           deals.push(this.createOpenDeal(pos));
-          let closeDeal = this.createCloseDeal(pos);
+          const closeDeal = this.createCloseDeal(pos);
           profit += closeDeal.profit;
           deals.push(closeDeal);
           positions.push(pos);
@@ -74,10 +74,11 @@ export class StrategyTesterParser {
     let balance = 0;
     deals.forEach((deal: Deal) => {
       deal.balance = balance + deal.profit + deal.commission + deal.swap;
+      deal.balance = +deal.balance.toFixed(2);
       deal.equity = deal.balance;
       balance = deal.balance;
     });
-    deals.push(this.createLastDeal(deals, balance));
+    deals.push(this.createLastDeal(deals, +balance.toFixed(2)));
     console.log('closed balance:', balance);
     return new DetailedStatement(positions, deals);
   }
